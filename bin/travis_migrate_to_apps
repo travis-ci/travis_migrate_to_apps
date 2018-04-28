@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+
+require 'travis_migrate_to_apps'
+
+TravisMigrateToApps.new(*ARGV)
