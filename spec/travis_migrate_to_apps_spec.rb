@@ -15,5 +15,5 @@ describe TravisMigrateToApps do
     run
   end
 
-  it { expect(WebMock).to have_requested(:put, 'https://api.github.com/user/installations/3/repositories/2') }
+  it { expect(WebMock).to have_requested(:put, 'https://api.github.com/user/installations/2/repositories/3') }
 end

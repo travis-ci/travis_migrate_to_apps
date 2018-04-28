@@ -1,7 +1,10 @@
 require 'net/https'
 require 'json'
+require 'colors'
 
 class TravisMigrateToApps < Struct.new(:owner_name, :travis_access_token, :github_access_token)
+  include Colors
+
   USAGE = 'Usage: travis_migrate_to_apps [owner_name] [travis_access_token] [github_access_token]'
 
   MSGS = {
@@ -43,15 +46,15 @@ class TravisMigrateToApps < Struct.new(:owner_name, :travis_access_token, :githu
   def initialize(*)
     super
     to_h.keys.each do |key|
-      abort "#{USAGE}\nNo #{key} given" unless send(key)
+      missing_arg(key) unless send(key)
     end
   end
 
   def run
-    msg :start, owner_name
+    msg :start, owner_name, color: :yellow
     validate
     migrate_repos
-    msg :done
+    msg :done, color: :green
   end
 
   private
@@ -75,7 +78,7 @@ class TravisMigrateToApps < Struct.new(:owner_name, :travis_access_token, :githu
     end
 
     def migrate_repo(repo)
-      uri = uri(:github, :installation_repos, repo['github_id'], installation['github_id'])
+      uri = uri(:github, :installation_repos, installation['github_id'], repo['github_id'])
       request(:put, uri, headers(:github))
       msg :migrated_repo, repo['name']
     end
@@ -106,19 +109,28 @@ class TravisMigrateToApps < Struct.new(:owner_name, :travis_access_token, :githu
 
     def request(method, uri, headers)
       req = Net::HTTP.const_get(method.to_s.capitalize).new(uri)
-      res = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
-        http.request(req)
-      end
+      headers.each { |key, value| req[key] = value }
+      http = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true)
+      res = http.request(req)
       error :request_failed, uri, res.code, res.body unless res.is_a?(Net::HTTPSuccess)
       JSON.parse(res.body) if method == :get
     end
 
     def error(key, *args)
-      abort MSGS[key] % args
+      abort colored(:red, MSGS[key] % args)
     end
 
     def msg(key, *args)
-      puts MSGS[key] % args
+      opts = args.last.is_a?(Hash) ? args.pop : {}
+      msg = MSGS[key] % args
+      msg = colored(opts[:color], msg) if opts[:color]
+      puts msg
+    end
+
+    def missing_arg(key)
+      puts colored(:red, "No #{key} given")
+      puts USAGE
+      abort
     end
 
     def only(hash, *keys)
