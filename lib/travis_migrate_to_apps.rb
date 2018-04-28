@@ -4,6 +4,42 @@ require 'json'
 class TravisMigrateToApps < Struct.new(:owner_name, :travis_access_token, :github_access_token)
   USAGE = 'Usage: travis_migrate_to_apps [owner_name] [travis_access_token] [github_access_token]'
 
+  MSGS = {
+    start:                'Starting to migrate %s to use the Travis CI GitHub App integration',
+    migrate_repos:        'Starting to migrate %i repositories',
+    migrated_repo:        'Migrated repository %s',
+    done:                 'Done.',
+    missing_installation: 'Sorry but we could not find an active installation for %s',
+    missing_repos:        'Sorry but we could not find any repositories to migrate',
+    request_failed:       "Sorry but a request %s failed, please check your auth token. (%i: %s)",
+  }
+
+  URIS = {
+    travis: {
+      installation: 'https://api.travis-ci.com/owner/%s?include=owner.installation',
+      repositories: 'https://api.travis-ci.com/owner/%s/repos?repository.active=true&repository.managed_by_installation=false&limit=%i&offset=%i'
+    },
+    github: {
+      installation_repos: 'https://api.github.com/user/installations/%i/repositories/%i'
+    }
+  }
+
+  HEADERS = {
+    travis: {
+      'Travis-API-Version' => '3',
+      'User-Agent'         => 'Travis GitHub App Migration Tool',
+      'Authorization'      => 'token %{token}'
+    },
+    github: {
+      'Accept'        => 'application/vnd.github.machine-man-preview+json',
+      'Authorization' => 'token %{token}'
+    }
+  }
+
+  PER_PAGE = 20
+
+  attr_reader :installation
+
   def initialize(*)
     super
     to_h.keys.each do |key|
@@ -12,108 +48,77 @@ class TravisMigrateToApps < Struct.new(:owner_name, :travis_access_token, :githu
   end
 
   def run
-    puts "Starting Migration for : #{owner_name}"
-
-    installation = find_installation
-
-    if !installation
-      puts "Sorry but we couldn't find an active installation for #{owner_name}"
-      exit
-    end
-
-    repos = find_repos_to_migrate
-
-    if repos.empty?
-      puts "Sorry but we couldn't find any repositories to migrate"
-      exit
-    end
-
-    puts
-    puts "Found #{repos.count} repositories to migrate"
-    puts "Starting the migration..."
-
-    repos.each do |repo|
-      add_repo_to_installation(repo['github_id'], installation['github_id'])
-      puts "migrated - #{repo['name']}"
-    end
-
-    puts
-    puts "Huzzah! All done!"
+    msg :start, owner_name
+    validate
+    migrate_repos
+    msg :done
   end
 
   private
 
-    def find_repos_to_migrate(repos=[], page=1)
-      limit = 20
-      offset = (page - 1) * limit
-
-      uri = URI("https://api.travis-ci.com/owner/#{owner_name}/repos?repository.active=true&repository.managed_by_installation=false&limit=#{limit}&offset=#{offset}")
-
-      req = Net::HTTP::Get.new(uri)
-      req['Travis-API-Version'] = "3"
-      req['User-Agent'] = "Travis Apps Migration Assistant"
-      req['Authorization'] = "token #{travis_access_token}"
-
-      res = Net::HTTP.start(uri.hostname, uri.port, :use_ssl => true) do |http|
-        http.request(req)
-      end
-
-      if !res.is_a?(Net::HTTPSuccess)
-        rputs
-        puts "Sorry but we had problem talking to Travis CI, please check your auth token"
-        puts res.body.inspect
-      else
-        decoded = JSON.parse(res.body)
-        repos += decoded['repositories'].map { |repo| only(repo, "name", "github_id") }
-        if !decoded["@pagination"]["is_last"]
-          find_repos_to_migrate(repos, page + 1)
-        else
-          repos
-        end
-      end
+    def installation
+      @installation ||= fetch_installation
     end
 
-    def find_installation
-      uri = URI("https://api.travis-ci.com/owner/#{owner_name}?include=owner.installation")
-
-      req = Net::HTTP::Get.new(uri)
-      req['Travis-API-Version'] = "3"
-      req['User-Agent'] = "Travis Apps Migration Assistant"
-      req['Authorization'] = "token #{travis_access_token}"
-
-      res = Net::HTTP.start(uri.hostname, uri.port, :use_ssl => true) do |http|
-        http.request(req)
-      end
-
-      if !res.is_a?(Net::HTTPSuccess)
-        puts
-        puts "Sorry but we had problem talking to Travis CI, please check your auth token"
-        puts res.body.inspect
-        raise
-      else
-        decoded = JSON.parse(res.body)
-        decoded['installation']
-      end
+    def repos
+      @repos ||= fetch_repos
     end
 
-    def add_repo_to_installation(repository_github_id, installation_id)
-      uri = URI("https://api.github.com/user/installations/#{installation_id}/repositories/#{repository_github_id}")
+    def validate
+      error :missing_installation, owner_name unless installation
+      error :missing_repos                    unless repos.any?
+    end
 
-      req = Net::HTTP::Put.new(uri)
-      req['Authorization'] = "token #{github_access_token}"
-      req['Accept'] = "application/vnd.github.machine-man-preview+json"
+    def migrate_repos
+      msg :migrate_repos, repos.count
+      repos.each { |repo| migrate_repo(repo) }
+    end
 
-      res = Net::HTTP.start(uri.hostname, uri.port, :use_ssl => true) do |http|
+    def migrate_repo(repo)
+      uri = uri(:github, :installation_repos, repo['github_id'], installation['github_id'])
+      request(:put, uri, headers(:github))
+      msg :migrated_repo, repo['name']
+    end
+
+    def fetch_installation
+      uri = uri(:travis, :installation, owner_name)
+      data = request(:get, uri, headers(:travis))
+      data['installation']
+    end
+
+    def fetch_repos(repos = [], page = 1)
+      offset = (page - 1) * PER_PAGE
+      uri    = uri(:travis, :repositories, owner_name, PER_PAGE, offset)
+      data   = request(:get, uri, headers(:travis))
+      repos += data['repositories'].map { |repo| only(repo, 'name', 'github_id') }
+      fetch_repos(repos, page + 1) unless data['@pagination']['is_last']
+      repos
+    end
+
+    def uri(target, resource, *args)
+      URI(URIS[target][resource] % args)
+    end
+
+    def headers(target)
+      args = { token: send(:"#{target}_access_token") }
+      HEADERS[target].map { |key, value| [key, value % args] }.to_h
+    end
+
+    def request(method, uri, headers)
+      req = Net::HTTP.const_get(method.to_s.capitalize).new(uri)
+      res = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
         http.request(req)
       end
+      error :request_failed, uri, res.code, res.body unless res.is_a?(Net::HTTPSuccess)
+      JSON.parse(res.body) if method == :get
+    end
 
-      if !res.is_a?(Net::HTTPSuccess)
-        puts
-        puts "Sorry but we had problem talking to GitHub, please check your auth token"
-        puts res.body.inspect
-      else
-        true
-      end
+    def error(key, *args)
+      abort MSGS[key] % args
+    end
+
+    def msg(key, *args)
+      puts MSGS[key] % args
     end
 
     def only(hash, *keys)
