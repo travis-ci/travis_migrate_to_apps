@@ -8,13 +8,16 @@ class TravisMigrateToApps < Struct.new(:owner_name, :travis_access_token, :githu
   USAGE = 'Usage: travis_migrate_to_apps [owner_name] [travis_access_token] [github_access_token]'
 
   MSGS = {
-    start:                'Starting to migrate %s to use the Travis CI GitHub App integration',
-    migrate_repos:        'Starting to migrate %i repositories',
-    migrated_repo:        'Migrated repository %s',
+    start:                'Starting to migrate the account %s to use the Travis CI GitHub App integration.',
+    fetch_installation:   "Looking up %s's GitHub App installation.",
+    fetch_repos:          "Looking up %s's active repositories.",
+    migrate_repos:        'Starting to migrate %i repositories.',
+    migrating_repo:       'Migrating repository %s ... ',
+    migrated_repo:        'done.',
     done:                 'Done.',
-    missing_installation: 'Sorry but we could not find an active installation for %s',
-    missing_repos:        'Sorry but we could not find any repositories to migrate',
-    request_failed:       "Sorry but a request %s failed, please check your auth token. (%i: %s)",
+    missing_installation: 'Sorry, we could not find an active installation for %s.',
+    missing_repos:        'Sorry, we could not find any repositories to migrate.',
+    request_failed:       "Sorry, a %s request to %s failed, please check your auth token. (%i: %s)",
   }
 
   URIS = {
@@ -64,7 +67,10 @@ class TravisMigrateToApps < Struct.new(:owner_name, :travis_access_token, :githu
     end
 
     def repos
-      @repos ||= fetch_repos
+      @repos ||= begin
+        msg :fetch_repos, owner_name
+        fetch_repos
+      end
     end
 
     def validate
@@ -78,12 +84,14 @@ class TravisMigrateToApps < Struct.new(:owner_name, :travis_access_token, :githu
     end
 
     def migrate_repo(repo)
+      msg :migrating_repo, repo['name'], nl: false
       uri = uri(:github, :installation_repos, installation['github_id'], repo['github_id'])
       request(:put, uri, headers(:github))
       msg :migrated_repo, repo['name']
     end
 
     def fetch_installation
+      msg :fetch_installation, owner_name
       uri = uri(:travis, :installation, owner_name)
       data = request(:get, uri, headers(:travis))
       data['installation']
@@ -94,7 +102,7 @@ class TravisMigrateToApps < Struct.new(:owner_name, :travis_access_token, :githu
       uri    = uri(:travis, :repositories, owner_name, PER_PAGE, offset)
       data   = request(:get, uri, headers(:travis))
       repos += data['repositories'].map { |repo| only(repo, 'name', 'github_id') }
-      fetch_repos(repos, page + 1) unless data['@pagination']['is_last']
+      repos  = fetch_repos(repos, page + 1) unless data['@pagination']['is_last']
       repos
     end
 
@@ -112,7 +120,7 @@ class TravisMigrateToApps < Struct.new(:owner_name, :travis_access_token, :githu
       headers.each { |key, value| req[key] = value }
       http = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true)
       res = http.request(req)
-      error :request_failed, uri, res.code, res.body unless res.is_a?(Net::HTTPSuccess)
+      error :request_failed, method, uri, res.code, res.body unless res.is_a?(Net::HTTPSuccess)
       JSON.parse(res.body) if method == :get
     end
 
@@ -124,7 +132,8 @@ class TravisMigrateToApps < Struct.new(:owner_name, :travis_access_token, :githu
       opts = args.last.is_a?(Hash) ? args.pop : {}
       msg = MSGS[key] % args
       msg = colored(opts[:color], msg) if opts[:color]
-      puts msg
+      method = opts[:nl].is_a?(FalseClass) ? :print : :puts
+      send(method, msg)
     end
 
     def missing_arg(key)
