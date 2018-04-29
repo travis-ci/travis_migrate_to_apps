@@ -14,6 +14,7 @@ Gem::Specification.new do |s|
   s.description   = 'Migrate your GitHub organizations to use the Travis CI GitHub App integration.'
 
   s.files         = Dir.glob('{bin/*,lib/**/*,[A-Z]*}')
+  s.executables   = Dir.glob('bin/*').map { |f| File.basename(f) }
   s.platform      = Gem::Platform::RUBY
   s.require_paths = ['lib']
 end
