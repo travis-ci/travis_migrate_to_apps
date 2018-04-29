@@ -2,4 +2,4 @@
 
 require 'travis_migrate_to_apps'
 
-TravisMigrateToApps.new(*ARGV).run
+TravisMigrateToApps::Cli.new(*ARGV).run

@@ -1,4 +1,4 @@
-describe TravisMigrateToApps do
+describe TravisMigrateToApps::Cli do
   let(:owner_name)   { 'travis-ci' }
   let(:travis_token) { 'travis_token' }
   let(:github_token) { 'github_token' }
