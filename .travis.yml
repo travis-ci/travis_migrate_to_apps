@@ -1,2 +1,3 @@
 sudo: false
-script: bundle exec rspec
+language: ruby
+script: bundle exec rspec -r spec_helper --color
