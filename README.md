@@ -1,10 +1,10 @@
 # Migrate your GitHub organizations to use the Travis CI GitHub App integration
 
-Travis CI will now be a unified platform with only one site: [https://travis-ci.com](https://travis-ci.com).
+This gem will help you migrate the repositories you have on [https://travis-ci.com](travis-ci.com) from legacy [GitHub Services](https://developer.github.com/v3/guides/replacing-github-services/) integration to the new [GitHub Apps](https://developer.github.com/apps/) integration.
 
-This change uses a new GitHub integration mechanism underneath: [GitHub Apps](https://developer.github.com/apps/) instead of [GitHub Services](https://developer.github.com/v3/guides/replacing-github-services/). The main difference is that you will now give Travis CI access to your repositories on a repository basis instead of giving it access to all of them.
+The main difference is that you will now give Travis CI access to your repositories on a repository basis instead of giving it access to all of them.
 
-Hence, we have developped this gem to help you migrate your currently active repositories on Travis CI in one sweep rather than having to add them manually one by one in the GitHub UI.
+Hence, we have developped this gem to help you migrate your repositories that are currently active on Travis CI in one sweep rather than having to add them manually one by one in the GitHub UI.
 
 Here are the steps:
 
@@ -15,7 +15,7 @@ gem install travis_migrate_to_apps
 
 ## 2. Generate a GitHub personal access token with repo scope
 
-You can generate new GitHub token here: https://github.com/settings/tokens/new
+You can generate new GitHub token [here](https://github.com/settings/tokens/new).
 
 Choose the name of your liking and ensure to select the whole `repo` scope as shown below:
 
