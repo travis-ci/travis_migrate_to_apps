@@ -1,6 +1,6 @@
 # Migrate your GitHub organizations to use the Travis CI GitHub App integration
 
-Travis CI will now be a unified platform with only one site: [;https://travis-ci.com](https://travis-ci.com).
+Travis CI will now be a unified platform with only one site: [https://travis-ci.com](https://travis-ci.com).
 
 This change uses a new GitHub integration mechanism underneath: [GitHub Apps](https://developer.github.com/apps/) instead of [GitHub Services](https://developer.github.com/v3/guides/replacing-github-services/). The main difference is that you will now give Travis CI access to your repositories on a repository basis instead of giving it access to all of them.
 
@@ -36,6 +36,8 @@ Take care of copying the newly generated token and save it for later usage.
 Go to your profile page on Travis CI: https://travis-ci.com/profile
 
 Click the "Activate GitHub Apps Integration" button highlighted below:
+
+FIXME: add screenshot
 
 You'll directed to the GitHub Apps page for the Travis CI app:
 
