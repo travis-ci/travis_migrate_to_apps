@@ -57,7 +57,7 @@ There's two ways you can get this token:
 
 ![Travis CI token on profile page](https://github.com/travis-ci/travis_migrate_to_apps/blob/assets/travis-ci-token-profile-page.png)
 
-1. Via the [Travis CI client](https://github.com/travis-ci/travis.rb) by running: `travis token --pro`
+2. Via the [Travis CI client](https://github.com/travis-ci/travis.rb) by running: `travis token --pro`
 
 ## 5. Run the gem
 
