@@ -51,7 +51,7 @@ You'll then be redirected to your profile page on Travis CI and the newly added 
 
 ## 4. Get your Travis CI API token
 
-There's two ways you can get this token:
+Here are the two ways you can get this token:
 
 1. On your profile page: https://travis-ci.com/profile
 
