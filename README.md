@@ -45,7 +45,7 @@ You'll directed to the GitHub Apps page for the Travis CI app:
 
 Choose at least one repository and click the "Approve & Install" button.
 
-You'll then be redirected to your profile page on Travis CI:
+You'll then be redirected to your profile page on Travis CI and the newly added repository should appear under "GitHub Apps Integration":
 
 ![Travis CI profile page](https://github.com/travis-ci/travis_migrate_to_apps/blob/assets/travis-ci-profile-with-github-apps-integration.png)
 
