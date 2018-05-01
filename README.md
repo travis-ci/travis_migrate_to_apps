@@ -37,7 +37,7 @@ Go to your profile page on Travis CI: https://travis-ci.com/profile
 
 Click the "Activate GitHub Apps Integration" button highlighted below:
 
-FIXME: add screenshot
+![Activate GitHub Apps Integration button](https://github.com/travis-ci/travis_migrate_to_apps/blob/assets/github-apps-button-on-profile-page.png)
 
 You'll directed to the GitHub Apps page for the Travis CI app:
 
@@ -55,7 +55,7 @@ There's two ways you can get this token:
 
 1. On your profile page: https://travis-ci.com/profile
 
-FIXME: add screenshot
+![Travis CI token on profile page](https://github.com/travis-ci/travis_migrate_to_apps/blob/assets/travis-ci-token-profile-page.png)
 
 1. Via the [Travis CI client](https://github.com/travis-ci/travis.rb) by running: `travis token --pro`
 
