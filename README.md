@@ -15,7 +15,7 @@ gem install travis_migrate_to_apps
 
 ## 2. Generate a GitHub personal access token with repo scope
 
-You can generate new GitHub token [here](https://github.com/settings/tokens/new).
+You can generate a new GitHub token [here](https://github.com/settings/tokens/new).
 
 Choose the name of your liking and ensure to select the whole `repo` scope as shown below:
 
