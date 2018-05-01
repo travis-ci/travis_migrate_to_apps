@@ -4,13 +4,13 @@ Travis CI will now be a unified platform with only one site: [https://travis-ci.
 
 This change uses a new GitHub integration mechanism underneath: [GitHub Apps](https://developer.github.com/apps/) instead of [GitHub Services](https://developer.github.com/v3/guides/replacing-github-services/). The main difference is that you will now give Travis CI access to your repositories on a repository basis instead of giving it access to all of them.
 
-Hence, we have developped this gem to help you migrate your currently active repositories in one sweep rather than having to add them manually one by one in the GitHub UI.
+Hence, we have developped this gem to help you migrate your currently active repositories on Travis CI in one sweep rather than having to add them manually one by one in the GitHub UI.
 
 Here are the steps:
 
 ## 1. Install the gem
 ```
-gem install ravis_migrate_to_apps
+gem install travis_migrate_to_apps
 ```
 
 ## 2. Generate a GitHub personal access token with repo scope
