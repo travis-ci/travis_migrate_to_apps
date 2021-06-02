@@ -3,10 +3,10 @@ require 'json'
 require 'colors'
 
 module TravisMigrateToApps
-  class Cli < Struct.new(:owner_name, :travis_access_token, :github_access_token)
+  class Cli < Struct.new(:owner_name, :travis_access_token, :github_access_token, :api_endpoint, :github_api_endpoint)
     include Colors
 
-    USAGE = 'Usage: travis_migrate_to_apps [owner_name] [travis_access_token] [github_access_token]'
+    USAGE = 'Usage: travis_migrate_to_apps [owner_name] [travis_access_token] [github_access_token] [travis api endpoint | https://api.travis-ci.com] [github api endpoint |  https://api.github.com]'
 
     MSGS = {
       start:                'Starting to migrate the account %s to use the Travis CI GitHub App integration.',
@@ -23,11 +23,11 @@ module TravisMigrateToApps
 
     URIS = {
       travis: {
-        installation: 'https://api.travis-ci.com/owner/%s?include=owner.installation',
-        repositories: 'https://api.travis-ci.com/owner/%s/repos?repository.active=true&repository.managed_by_installation=false&limit=%i&offset=%i'
+        installation: '%s/owner/%s?include=owner.installation',
+        repositories: '%s/owner/%s/repos?repository.active=true&repository.managed_by_installation=false&limit=%i&offset=%i'
       },
       github: {
-        installation_repos: 'https://api.github.com/user/installations/%i/repositories/%i'
+        installation_repos: '%s/user/installations/%i/repositories/%i'
       }
     }
 
@@ -46,11 +46,19 @@ module TravisMigrateToApps
     PER_PAGE = 20
 
     attr_reader :installation
+    attr_reader :api_endpoint
+    attr_reader :github_api_endpoint
 
     def initialize(*)
       super
       to_h.keys.each do |key|
-        missing_arg(key) unless send(key)
+        if key == :api_endpoint
+          @api_endpoint = to_h[key] ? to_h[key] :  'https://api.travis-ci.com'
+        elsif key == :github_api_endpoint
+          @github_api_endpoint = to_h[key] ? to_h[key] :  'https://api.github.com'
+        else
+          missing_arg(key) unless send(key)
+        end
       end
     end
 
@@ -86,21 +94,21 @@ module TravisMigrateToApps
 
       def migrate_repo(repo)
         msg :migrating_repo, repo['name'], nl: false
-        uri = uri(:github, :installation_repos, installation['github_id'], repo['github_id'])
+        uri = uri(:github, :installation_repos, github_api_endpoint, installation['github_id'], repo['github_id'])
         request(:put, uri, headers(:github))
         msg :migrated_repo, repo['name']
       end
 
       def fetch_installation
         msg :fetch_installation, owner_name
-        uri = uri(:travis, :installation, owner_name)
+        uri = uri(:travis, :installation, api_endpoint, owner_name)
         data = request(:get, uri, headers(:travis))
         data['installation']
       end
 
       def fetch_repos(repos = [], page = 1)
         offset = (page - 1) * PER_PAGE
-        uri    = uri(:travis, :repositories, owner_name, PER_PAGE, offset)
+        uri    = uri(:travis, :repositories, api_endpoint, owner_name, PER_PAGE, offset)
         data   = request(:get, uri, headers(:travis))
         repos += data['repositories'].map { |repo| only(repo, 'name', 'github_id') }
         repos  = fetch_repos(repos, page + 1) unless data['@pagination']['is_last']
